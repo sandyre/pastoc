@@ -19,65 +19,56 @@ namespace pastoc {
 namespace parsers
 {
 
-	template <typename IteratorT = std::string::iterator, typename SkipperT>
-	class PascalGrammar : public qi::grammar<Iterator, ast::Object(), SkipperT>
+	namespace detail
 	{
-	public:
-		PascalGrammar()
-			:	PascalGrammar::base_type(_objectRule, "Object")
+
+		template <typename IteratorT>
+		class IdentifierGrammar : public qi::grammar<IteratorT, std::string()>
 		{
-			// whole program structure
-			_programRule %= _programNameRule > _blockRule > '.';
+		public:
+			IdentifierGrammar()
+				:	IdentifierGrammar::base_type(_rule, "Identifier")
+			{
+				_rule %= +(qi::char_("a-zA-Z"));
+			}
 
-			_programNameRule %= qi::lit("Program ") > _variableRule;
+		private:
+			qi::rule<IteratorT, std::string()>		_rule;
+		};
 
-			_blockRule %= _declarationListRule > _compoundStatementRule;
 
-			_declarationsRule %= -(qi::lit("Var ") > +_variableDeclarationRule);
+		template <typename IteratorT>
+		class VariableGrammar : public qi::grammar<IteratorT, std::string()>
+		{
+		public:
+			VariableGrammar()
+				:	VariableGrammar::base_type(_rule, "Variable")
+			{
+				_rule %= _identifierGrammar;
+			}
 
-			_variableDeclarationRule %= _identifierRule >> *(',' >> _identifierRule) > ':' > _typeSpecifierRule;
+		private:
+			qi::rule<IteratorT, std::string()>		_rule;
+			IdentifierGrammar<IteratorT>			_identifierGrammar;
+		};
 
-			_typeSpecifierRule %= qi::lit("Integer") | qi::lit("Real") | qi::lit("String") | qi::lit("Boolean");
 
-			_compoundStatementRule %= qi::lit("Begin ") > _statementListRule > qi::lit("End");
+		template <typename IteratorT>
+		class ProgramNameGrammar : public qi::grammar<IteratorT>
+		{
+		public:
+			ProgramNameGrammar()
+				:	ProgramNameGrammar::base_type(_rule, "ProgramName")
+			{
+				_rule %= qi::lit("Program ") > _variableGrammar > ';';
+			}
 
-			_statementListRule %= _statementRule | (_statementRule > ';' > _statementListRule));
+		private:
+			qi::rule<IteratorT>			_rule;
+			VariableGrammar<IteratorT>	_variableGrammar;
+		};
 
-			_statementRule %= -(_conditionalStatement | _writeLnStatementRule | _forLoopStatementRule | _assignmentStatementRule | _compoundStatementRule);
-
-			_writeLnStatementRule %= qi::lit("writeln") > '(' >> _expressionRule >> *(_expressionRule > ',') > ')';
-
-		}
-
-	private:
-		qi::rule<IteratorT, ast::Object(), SkipperT>				_objectRule;
-		qi::rule<IteratorT, ast::Program(), SkipperT>				_programRule;
-		qi::rule<IteratorT, ast::ProgramName(), SkipperT>			_programNameRule;
-		qi::rule<IteratorT, ast::Block(), SkipperT>					_blockRule;
-		qi::rule<IteratorT, ast::Declarations(), SkipperT>			_declarationsRule;
-		qi::rule<IteratorT, ast::VariableDeclaration(), SkipperT>	_variableDeclarationRule;
-
-		qi::rule<IteratorT, ast::CompoundStatement(), SkipperT>		_compoundStatementRule;
-		qi::rule<IteratorT, ast::Statement(), SkipperT>				_statementRule;
-		qi::rule<IteratorT, ast::StatementList(), SkipperT>			_statementListRule;
-		qi::rule<IteratorT, ast::WriteLnStatement(), SkipperT>		_writeLnStatementRule;
-		qi::rule<IteratorT, ast::ConditionalStatement(), SkipperT>	_conditionalStatement;
-		qi::rule<IteratorT, ast::ForLoopStatement(), SkipperT>		_forLoopStatementRule;
-		qi::rule<IteratorT, ast::AssignmentStatement(), SkipperT>	_assignmentStatementRule;
-
-		qi::rule<IteratorT, ast::Expression(), SkipperT>			_expressionRule;
-		qi::rule<IteratorT, ast::SimpleExpression(), SkipperT>		_simpleExpessionRule;
-		qi::rule<IteratorT, ast::BooleanExpression(), SkipperT>		_booleanExpressionRule;
-		qi::rule<IteratorT, ast::StringExpression(), SkipperT>		_stringExpressionRule;
-
-		qi::rule<IteratorT, ast::Term(), SkipperT>					_termRule;
-		qi::rule<IteratorT, ast::Factor(), SkipperT>				_factorRule;
-		qi::rule<IteratorT, ast::RelationalOpeator(), SkipperT>		_relationalOperatorRule;
-		qi::rule<IteratorT, ast::Variable(), SkipperT>				_variableRule;
-
-		qi::rule<IteratorT, ast::Identifier(), SkipperT>			_identifierRule;
-		qi::rule<IteratorT, ast::TypeSpecifier(), SkipperT>			_typeSpecifierRule;
-	};
+	}
 
 }}
 
