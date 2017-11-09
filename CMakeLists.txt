@@ -7,6 +7,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 set(SOURCES
 	src/main.cpp
+	src/app.cpp
+	src/parser.cpp
 	)
 
 add_executable(pastoc ${SOURCES})
