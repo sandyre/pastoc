@@ -8,6 +8,7 @@
 
 #include "parser.hpp"
 
+#include "AST.hpp"
 #include "parsing_rules.hpp"
 
 #include <fstream>
@@ -32,18 +33,20 @@ namespace pastoc
 					endlIndexes.push_back(idx);
 		}
 
-		parsers::PascalGrammar<std::string::const_iterator>	pascalGrammar;
+		bool success = false;
+		ast::PascalProgram program;
+		parsers::PascalGrammar<std::string::const_iterator> pascalGrammar;
 		std::string::const_iterator curIter = fileContent.begin(), endIter = fileContent.end();
 		try
+		{ success = qi::phrase_parse(curIter, endIter, pascalGrammar, boost::spirit::qi::space, program); }
+		catch (const boost::spirit::qi::expectation_failure<std::string::const_iterator>& ex)
 		{
-			qi::phrase_parse(curIter, endIter, pascalGrammar, boost::spirit::ascii::space);
-		}
-		catch (const std::exception& ex)
-		{
-			std::cout << "Exception thrown at parsing phase: " << ex.what() << std::endl;
+			std::cout << "Expected: " << ex.what_ << std::endl;
+			std::cout << "Got: \"" << std::string(ex.first, ex.last) << "\"" << std::endl;
+			return;
 		}
 
-		if (curIter != endIter)
+		if (!success && curIter != endIter)
 		{
 			const size_t symbolIdx = std::distance(fileContent.begin(), curIter);
 			const auto lineIter = std::find_if(endlIndexes.begin(), endlIndexes.end(),
@@ -58,6 +61,13 @@ namespace pastoc
 		else
 		{
 			std::cout << "Parsing phase ended gracefully" << std::endl;
+
+			std::cout << "AST constructed, printing out" << std::endl << std::endl;
+			std::cout << "Program name: " << program.Name << std::endl;
+			std::cout << "Block:" << std::endl;
+			std::cout << "Variables:" << std::endl;
+			for (const auto& decl : program.Block.Decls.Decls)
+				std::cout << decl << std::endl;
 		}
 	}
 

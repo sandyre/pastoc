@@ -9,6 +9,8 @@
 #ifndef parsing_rules_h
 #define parsing_rules_h
 
+#include "AST.hpp"
+
 #include <boost/spirit/include/qi.hpp>
 
 #include <string>
@@ -29,6 +31,7 @@ namespace parsers
 			IdentifierGrammar()
 				:	IdentifierGrammar::base_type(_rule, "Identifier")
 			{
+				_rule.name("Identifier");
 				_rule %= +(qi::char_("a-zA-Z"));
 			}
 
@@ -44,6 +47,7 @@ namespace parsers
 			VariableGrammar()
 				:	VariableGrammar::base_type(_rule, "Variable")
 			{
+				_rule.name("Variable");
 				_rule %= _identifierGrammar;
 			}
 
@@ -54,18 +58,19 @@ namespace parsers
 
 
 		template <typename IteratorT>
-		class ProgramNameGrammar : public qi::grammar<IteratorT>
+		class ProgramNameGrammar : public qi::grammar<IteratorT, std::string()>
 		{
 		public:
 			ProgramNameGrammar()
 				:	ProgramNameGrammar::base_type(_rule, "ProgramName")
 			{
-				_rule %= qi::lit("Program ") > _variableGrammar > ';';
+				_rule.name("ProgramName");
+				_rule %= qi::skip(qi::space)[qi::lit("Program") > qi::no_skip[qi::omit[+qi::space]] > _variableGrammar > ';'];
 			}
 
 		private:
-			qi::rule<IteratorT>			_rule;
-			VariableGrammar<IteratorT>	_variableGrammar;
+			qi::rule<IteratorT, std::string()>			_rule;
+			VariableGrammar<IteratorT>					_variableGrammar;
 		};
 
 
@@ -76,60 +81,72 @@ namespace parsers
 			TypeSpecifierGrammar()
 				:	TypeSpecifierGrammar::base_type(_rule, "TypeSpecifier")
 			{
-				_rule %= qi::lit("Boolean") | qi::lit("Integer") | qi::lit("Real") | qi::lit("String");
+				_types.add
+						("Boolean", "Boolean")
+						("Integer", "Integer")
+						("Real", "Real")
+						("String", "String");
+
+				_rule.name("TypeSpecifier");
+				_rule %= _types;
 			}
 
 		private:
+			qi::symbols<char, std::string>		_types;
 			qi::rule<IteratorT, std::string()>	_rule;
 		};
 
 
 		template <typename IteratorT>
-		class VariableDeclarationGrammar : public qi::grammar<IteratorT>
+		class VariableDeclarationGrammar : public qi::grammar<IteratorT, ast::VariableDeclaration()>
 		{
 		public:
 			VariableDeclarationGrammar()
 				:	VariableDeclarationGrammar::base_type(_rule, "VariableDeclaration")
 			{
-				_rule %= _identifierGrammar >> *(',' > _identifierGrammar) >> ':'
-						>> _typeSpecifierGrammar;
+				_rule.name("VariableDeclaration");
+				_idsRule %= qi::skip(qi::space)[_identifierGrammar > *(qi::lit(',') > _identifierGrammar) > qi::lit(':')];
+				_rule %= qi::skip(qi::space)[_idsRule > _typeSpecifierGrammar];
 			}
 
 		private:
-			qi::rule<IteratorT>					_rule;
-			IdentifierGrammar<IteratorT>		_identifierGrammar;
-			TypeSpecifierGrammar<IteratorT>		_typeSpecifierGrammar;
+			qi::rule<IteratorT, ast::VariableDeclaration()>		_rule;
+			qi::rule<IteratorT, std::vector<std::string>()>		_idsRule;
+			IdentifierGrammar<IteratorT>						_identifierGrammar;
+			TypeSpecifierGrammar<IteratorT>						_typeSpecifierGrammar;
 		};
 
 
 		template <typename IteratorT>
-		class DeclarationsGrammar : public qi::grammar<IteratorT>
+		class DeclarationsGrammar : public qi::grammar<IteratorT, ast::Declarations()>
 		{
 		public:
 			DeclarationsGrammar()
 				:	DeclarationsGrammar::base_type(_rule, "Declarations")
 			{
-				_rule %= qi::lit("Var ") >> +(_variableDeclarationGrammar >> ';');
+				_rule.name("Declarations");
+				_rule %= qi::skip(qi::space)[qi::lit("Var") > qi::no_skip[qi::omit[+qi::space]] > +(_variableDeclarationGrammar > qi::lit(';'))];
 			}
 
 		private:
-			qi::rule<IteratorT>						_rule;
-			VariableDeclarationGrammar<IteratorT>	_variableDeclarationGrammar;
+			qi::rule<IteratorT, ast::Declarations()>	_rule;
+			VariableDeclarationGrammar<IteratorT>		_variableDeclarationGrammar;
 		};
 
 
 		template <typename IteratorT>
-		class BlockGrammar : public qi::grammar<IteratorT>
+		class BlockGrammar : public qi::grammar<IteratorT, ast::Block()>
 		{
 		public:
 			BlockGrammar()
 				:	BlockGrammar::base_type(_rule, "Block")
 			{
+				_rule.name("Block");
 				_rule %= _declarationsGrammar;
 			}
 
 		private:
-			qi::rule<IteratorT>						_rule;
+			qi::rule<IteratorT, ast::Block()>		_rule;
 			DeclarationsGrammar<IteratorT>			_declarationsGrammar;
 		};
 
@@ -137,17 +154,17 @@ namespace parsers
 
 
 	template <typename IteratorT>
-	class PascalGrammar : public qi::grammar<IteratorT>
+	class PascalGrammar : public qi::grammar<IteratorT, ast::PascalProgram()>
 	{
 	public:
 		PascalGrammar()
 			:	PascalGrammar::base_type(_rule, "Pascal")
 		{
-			_rule %= _programNameGrammar >> _blockGrammar >> '.';
+			_rule %= qi::skip(qi::space)[_programNameGrammar > _blockGrammar > '.'];
 		}
 
 	private:
-		qi::rule<IteratorT>							_rule;
+		qi::rule<IteratorT, ast::PascalProgram()>	_rule;
 		detail::ProgramNameGrammar<IteratorT>		_programNameGrammar;
 		detail::BlockGrammar<IteratorT>				_blockGrammar;
 	};
