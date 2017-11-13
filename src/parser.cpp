@@ -50,10 +50,10 @@ namespace pastoc
 		{
 			const size_t symbolIdx = std::distance(fileContent.begin(), curIter);
 			const auto lineIter = std::find_if(endlIndexes.begin(), endlIndexes.end(),
-											   [&](size_t idx)
-											   {
-												   return idx > symbolIdx;
-											   });
+											[&](size_t idx)
+											{
+												return idx > symbolIdx;
+											});
 			const size_t lineIdx = lineIter != endlIndexes.end() ? std::distance(endlIndexes.begin(), lineIter) : 0;
 
 			std::cout << "Syntax error at line: " << lineIdx << " symbol: " << symbolIdx << std::endl;

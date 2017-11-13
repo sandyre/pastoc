@@ -31,11 +31,16 @@ namespace parsers
 			IdentifierGrammar()
 				:	IdentifierGrammar::base_type(_rule, "Identifier")
 			{
+				_keywords.add
+						("Begin", "")
+						("End", "");
+
 				_rule.name("Identifier");
-				_rule %= +(qi::char_("a-zA-Z"));
+				_rule %= +(qi::char_("a-zA-Z") - _keywords);
 			}
 
 		private:
+			qi::symbols<char, std::string>			_keywords;
 			qi::rule<IteratorT, std::string()>		_rule;
 		};
 
@@ -135,6 +140,59 @@ namespace parsers
 
 
 		template <typename IteratorT>
+		class StatementGrammar : public qi::grammar<IteratorT>
+		{
+		public:
+			StatementGrammar()
+				:	StatementGrammar::base_type(_rule, "Statement")
+			{
+				_rule.name("Statement");
+				_rule %= qi::lit("statement");
+			}
+
+		private:
+			qi::rule<IteratorT>				_rule;
+		};
+
+
+		template <typename IteratorT>
+		class StatementListGrammar : public qi::grammar<IteratorT>
+		{
+		public:
+			StatementListGrammar()
+				:	StatementListGrammar::base_type(_rule, "StatementList")
+			{
+				_rule.name("StatementList");
+				_rule %= qi::skip(qi::space)[_statementGrammar >> -(_statementGrammar > ';' > _rule)];
+			}
+
+		private:
+			qi::rule<IteratorT>				_rule;
+			StatementGrammar<IteratorT>		_statementGrammar;
+		};
+
+
+		template <typename IteratorT>
+		class CompoundStatementGrammar : public qi::grammar<IteratorT>
+		{
+		public:
+			CompoundStatementGrammar()
+				:	CompoundStatementGrammar::base_type(_rule, "CompoundStatement")
+			{
+				_rule.name("CompoundStatement");
+				_rule %= qi::skip(qi::space)[qi::lit("Begin") >
+					qi::no_skip[qi::omit[+qi::space]] >
+					_statementListGrammar >
+					qi::lit("End")];
+			};
+
+		private:
+			qi::rule<IteratorT>					_rule;
+			StatementListGrammar<IteratorT>		_statementListGrammar;
+		};
+
+
+		template <typename IteratorT>
 		class BlockGrammar : public qi::grammar<IteratorT, ast::Block()>
 		{
 		public:
@@ -142,12 +200,13 @@ namespace parsers
 				:	BlockGrammar::base_type(_rule, "Block")
 			{
 				_rule.name("Block");
-				_rule %= _declarationsGrammar;
+				_rule %= qi::skip(qi::space)[_declarationsGrammar > qi::no_skip[qi::omit[+qi::space]] > _compoundStatementGrammar];
 			}
 
 		private:
 			qi::rule<IteratorT, ast::Block()>		_rule;
 			DeclarationsGrammar<IteratorT>			_declarationsGrammar;
+			CompoundStatementGrammar<IteratorT>		_compoundStatementGrammar;
 		};
 
 	}
