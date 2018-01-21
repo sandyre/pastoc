@@ -9,6 +9,10 @@
 #ifndef parser_hpp
 #define parser_hpp
 
+#include "AST.hpp"
+
+#include <boost/optional.hpp>
+
 #include <string>
 
 namespace pastoc
@@ -17,7 +21,7 @@ namespace pastoc
 	class Parser
 	{
 	public:
-		static void Process(const std::string& inputPath);
+		static boost::optional<ast::PascalProgram> Process(const std::string& inputPath);
 	};
 
 }

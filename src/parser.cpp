@@ -19,7 +19,7 @@
 namespace pastoc
 {
 
-	void Parser::Process(const std::string& inputPath)
+	boost::optional<ast::PascalProgram> Parser::Process(const std::string& inputPath)
 	{
 		std::ifstream fileStream(inputPath);
 		if (!fileStream.is_open())
@@ -43,7 +43,7 @@ namespace pastoc
 		{
 			std::cout << "Expected: " << ex.what_ << std::endl;
 			std::cout << "Got: \"" << std::string(ex.first, ex.last) << "\"" << std::endl;
-			return;
+			return boost::optional<ast::PascalProgram>();
 		}
 
 		if (!success && curIter != endIter)
@@ -57,6 +57,7 @@ namespace pastoc
 			const size_t lineIdx = lineIter != endlIndexes.end() ? std::distance(endlIndexes.begin(), lineIter) : 0;
 
 			std::cout << "Syntax error at line: " << lineIdx << " symbol: " << symbolIdx << std::endl;
+			return boost::optional<ast::PascalProgram>();
 		}
 		else
 		{
@@ -68,6 +69,8 @@ namespace pastoc
 			std::cout << "Variables:" << std::endl;
 			for (const auto& decl : program.Block.Decls.Decls)
 				std::cout << decl << std::endl;
+
+			return program;
 		}
 	}
 

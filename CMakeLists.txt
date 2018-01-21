@@ -9,6 +9,7 @@ set(SOURCES
 	src/main.cpp
 	src/app.cpp
 	src/parser.cpp
+	src/generator.cpp
 	)
 
 add_executable(pastoc ${SOURCES})

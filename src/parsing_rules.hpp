@@ -182,7 +182,7 @@ namespace parsers
 				_rule.name("CompoundStatement");
 				_rule %= qi::skip(qi::space)[qi::lit("Begin") >
 					qi::no_skip[qi::omit[+qi::space]] >
-					_statementListGrammar >
+					/* _statementListGrammar  > */
 					qi::lit("End")];
 			};
 

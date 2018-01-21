@@ -66,6 +66,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 	(pastoc::ast::Block, Block)
 )
 
+
 inline std::ostream& operator<<(std::ostream& stream, const pastoc::ast::VariableDeclaration& decl)
 {
 	for (const auto& varName : decl.Vars)

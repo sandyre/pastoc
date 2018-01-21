@@ -12,13 +12,14 @@
 #include <string>
 
 #include "parser.hpp"
+#include "generator.hpp"
 
 class App
 {
 public:
 	App(const std::string& inputPath)
 	{
-		pastoc::Parser::Process(inputPath);
+		pastoc::Generator::Generate(inputPath, pastoc::Parser::Process(inputPath));
 	}
 };
 
