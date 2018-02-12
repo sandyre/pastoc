@@ -12,62 +12,73 @@
 #include "AST.hpp"
 
 #include <boost/spirit/include/karma.hpp>
+#include <boost/spirit/include/phoenix.hpp>
+#include <boost/phoenix/bind/bind_member_variable.hpp>
+#include <boost/bind.hpp>
 
 namespace karma = boost::spirit::karma;
+namespace phoenix = boost::phoenix;
 
 namespace pastoc {
 namespace generators
 {
 
-	namespace detail
-	{
-
-		template <typename IteratorT>
-		class ProgramNameGrammar : public karma::grammar<IteratorT, std::string()>
-		{
-		public:
-			ProgramNameGrammar()
-				:	ProgramNameGrammar::base_type(_rule)
-			{
-				_rule = karma::lit("// Program name: ") << karma::eol;
-				 //_rule = karma::lit("// Program name: ") << karma::string << karma::eol;
-			}
-
-		private:
-			karma::rule<IteratorT, std::string()>		_rule;
-		};
-
-
-		template <typename IteratorT>
-		class BlockGrammar : public karma::grammar<IteratorT, ast::Block()>
-		{
-		public:
-			BlockGrammar()
-				:	BlockGrammar::base_type(_rule)
-			{
-				_rule = karma::lit("BLOCK");
-			}
-
-		private:
-			karma::rule<IteratorT, ast::Block()>		_rule;
-		};
-
-	}
-
-
-	template <typename IteratorT>
-	class PascalGrammar : public karma::grammar<IteratorT, ast::PascalProgram()>
+	template <typename OutputIterator>
+	class cpp_grammar : public karma::grammar<OutputIterator, ast::pascal_program()>
 	{
 	public:
-		PascalGrammar()
-			:	PascalGrammar::base_type(_rule)
+		cpp_grammar()
+			:	cpp_grammar::base_type(_program)
 		{
-			_rule = _programNameGrammar << karma::omit;
+			_identifier.name("identifier");
+			_identifier %= karma::string;
+
+			_program.name("program");
+			_program %=
+					"// Program name: " << _identifier << karma::eol <<
+					"int main(int argc, char* argv[])" << karma::eol <<
+					_block << karma::eol;
+
+			_block.name("block");
+			_block %=
+					"{" << karma::eol <<
+					_declarations << karma::eol <<
+					karma::skip[_compound_statement] <<
+					"}" << karma::eol;
+
+			_integer_type %= "int" << karma::omit[karma::eol];
+			_real_type %= "double" << karma::omit[karma::eol];
+			_string_type %= "std::string" << karma::omit[karma::eol];
+			_boolean_type %= "bool" << karma::omit[karma::eol];
+
+			_type_specifier.name("type_specifier");
+			_type_specifier %=
+					_integer_type |
+					_real_type |
+					_string_type |
+					_boolean_type;
+
+			_declarations.name("declarations");
+			_declarations %= (_type_specifier[karma::_1 = phoenix::bind(&ast::declarations::type, karma::_val)] << karma::omit[karma::eol]) |
+					_empty;
+
+			_empty %= karma::omit[karma::eol];
 		}
 
 	private:
-		karma::rule<IteratorT, ast::PascalProgram()>	_rule;
-		detail::ProgramNameGrammar<IteratorT>			_programNameGrammar;
+		karma::rule<OutputIterator, ast::pascal_program()>			_program;
+		karma::rule<OutputIterator, ast::identifier()>				_identifier;
+		karma::rule<OutputIterator, ast::block()>					_block;
+		karma::rule<OutputIterator, ast::declarations()>			_declarations;
+		karma::rule<OutputIterator, ast::compound_statement()>		_compound_statement;
+
+		karma::rule<OutputIterator, ast::empty()>					_empty;
+
+		karma::rule<OutputIterator, ast::type_spec()>				_type_specifier;
+		karma::rule<OutputIterator, ast::integer()>					_integer_type;
+		karma::rule<OutputIterator, ast::real()>					_real_type;
+		karma::rule<OutputIterator, ast::string()>					_string_type;
+		karma::rule<OutputIterator, ast::boolean()>					_boolean_type;
 	};
 
 }}

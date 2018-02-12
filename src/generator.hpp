@@ -21,7 +21,7 @@ namespace pastoc
 	class Generator
 	{
 	public:
-		static void Generate(const std::string& inputPath, boost::optional<pastoc::ast::PascalProgram> ast);
+		static void Generate(const std::string& inputPath, boost::optional<pastoc::ast::pascal_program> ast);
 	};
 
 }

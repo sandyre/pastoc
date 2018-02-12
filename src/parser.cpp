@@ -19,7 +19,7 @@
 namespace pastoc
 {
 
-	boost::optional<ast::PascalProgram> Parser::Process(const std::string& inputPath)
+	boost::optional<ast::pascal_program> Parser::Process(const std::string& inputPath)
 	{
 		std::ifstream fileStream(inputPath);
 		if (!fileStream.is_open())
@@ -34,16 +34,16 @@ namespace pastoc
 		}
 
 		bool success = false;
-		ast::PascalProgram program;
-		parsers::PascalGrammar<std::string::const_iterator> pascalGrammar;
+		ast::pascal_program program;
+		parsers::pascal_grammar<std::string::const_iterator, qi::space_type> pascal_grammar;
 		std::string::const_iterator curIter = fileContent.begin(), endIter = fileContent.end();
 		try
-		{ success = qi::phrase_parse(curIter, endIter, pascalGrammar, boost::spirit::qi::space, program); }
+		{ success = qi::phrase_parse(curIter, endIter, pascal_grammar, boost::spirit::qi::space, program); }
 		catch (const boost::spirit::qi::expectation_failure<std::string::const_iterator>& ex)
 		{
 			std::cout << "Expected: " << ex.what_ << std::endl;
 			std::cout << "Got: \"" << std::string(ex.first, ex.last) << "\"" << std::endl;
-			return boost::optional<ast::PascalProgram>();
+			return boost::optional<ast::pascal_program>();
 		}
 
 		if (!success && curIter != endIter)
@@ -57,18 +57,19 @@ namespace pastoc
 			const size_t lineIdx = lineIter != endlIndexes.end() ? std::distance(endlIndexes.begin(), lineIter) : 0;
 
 			std::cout << "Syntax error at line: " << lineIdx << " symbol: " << symbolIdx << std::endl;
-			return boost::optional<ast::PascalProgram>();
+			return boost::optional<ast::pascal_program>();
 		}
 		else
 		{
 			std::cout << "Parsing phase ended gracefully" << std::endl;
 
 			std::cout << "AST constructed, printing out" << std::endl << std::endl;
-			std::cout << "Program name: " << program.Name << std::endl;
-			std::cout << "Block:" << std::endl;
+			std::cout << "Program name: " << program.name << std::endl;
 			std::cout << "Variables:" << std::endl;
+			/*
 			for (const auto& decl : program.Block.Decls.Decls)
 				std::cout << decl << std::endl;
+			*/
 
 			return program;
 		}

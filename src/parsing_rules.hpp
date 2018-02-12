@@ -13,219 +13,149 @@
 
 #include <boost/spirit/include/qi.hpp>
 
-#include <string>
-
 namespace qi = boost::spirit::qi;
 
 namespace pastoc {
 namespace parsers
 {
 
-	namespace detail
-	{
-
-		template <typename IteratorT>
-		class IdentifierGrammar : public qi::grammar<IteratorT, std::string()>
-		{
-		public:
-			IdentifierGrammar()
-				:	IdentifierGrammar::base_type(_rule, "Identifier")
-			{
-				_keywords.add
-						("Begin", "")
-						("End", "");
-
-				_rule.name("Identifier");
-				_rule %= +(qi::char_("a-zA-Z") - _keywords);
-			}
-
-		private:
-			qi::symbols<char, std::string>			_keywords;
-			qi::rule<IteratorT, std::string()>		_rule;
-		};
-
-
-		template <typename IteratorT>
-		class VariableGrammar : public qi::grammar<IteratorT, std::string()>
-		{
-		public:
-			VariableGrammar()
-				:	VariableGrammar::base_type(_rule, "Variable")
-			{
-				_rule.name("Variable");
-				_rule %= _identifierGrammar;
-			}
-
-		private:
-			qi::rule<IteratorT, std::string()>		_rule;
-			IdentifierGrammar<IteratorT>			_identifierGrammar;
-		};
-
-
-		template <typename IteratorT>
-		class ProgramNameGrammar : public qi::grammar<IteratorT, std::string()>
-		{
-		public:
-			ProgramNameGrammar()
-				:	ProgramNameGrammar::base_type(_rule, "ProgramName")
-			{
-				_rule.name("ProgramName");
-				_rule %= qi::skip(qi::space)[qi::lit("Program") > qi::no_skip[qi::omit[+qi::space]] > _variableGrammar > ';'];
-			}
-
-		private:
-			qi::rule<IteratorT, std::string()>			_rule;
-			VariableGrammar<IteratorT>					_variableGrammar;
-		};
-
-
-		template <typename IteratorT>
-		class TypeSpecifierGrammar : public qi::grammar<IteratorT, std::string()>
-		{
-		public:
-			TypeSpecifierGrammar()
-				:	TypeSpecifierGrammar::base_type(_rule, "TypeSpecifier")
-			{
-				_types.add
-						("Boolean", "Boolean")
-						("Integer", "Integer")
-						("Real", "Real")
-						("String", "String");
-
-				_rule.name("TypeSpecifier");
-				_rule %= _types;
-			}
-
-		private:
-			qi::symbols<char, std::string>		_types;
-			qi::rule<IteratorT, std::string()>	_rule;
-		};
-
-
-		template <typename IteratorT>
-		class VariableDeclarationGrammar : public qi::grammar<IteratorT, ast::VariableDeclaration()>
-		{
-		public:
-			VariableDeclarationGrammar()
-				:	VariableDeclarationGrammar::base_type(_rule, "VariableDeclaration")
-			{
-				_rule.name("VariableDeclaration");
-				_idsRule %= qi::skip(qi::space)[_identifierGrammar > *(qi::lit(',') > _identifierGrammar) > qi::lit(':')];
-				_rule %= qi::skip(qi::space)[_idsRule > _typeSpecifierGrammar];
-			}
-
-		private:
-			qi::rule<IteratorT, ast::VariableDeclaration()>		_rule;
-			qi::rule<IteratorT, std::vector<std::string>()>		_idsRule;
-			IdentifierGrammar<IteratorT>						_identifierGrammar;
-			TypeSpecifierGrammar<IteratorT>						_typeSpecifierGrammar;
-		};
-
-
-		template <typename IteratorT>
-		class DeclarationsGrammar : public qi::grammar<IteratorT, ast::Declarations()>
-		{
-		public:
-			DeclarationsGrammar()
-				:	DeclarationsGrammar::base_type(_rule, "Declarations")
-			{
-				_rule.name("Declarations");
-				_rule %= qi::skip(qi::space)[qi::lit("Var") > qi::no_skip[qi::omit[+qi::space]] > +(_variableDeclarationGrammar > qi::lit(';'))];
-			}
-
-		private:
-			qi::rule<IteratorT, ast::Declarations()>	_rule;
-			VariableDeclarationGrammar<IteratorT>		_variableDeclarationGrammar;
-		};
-
-
-		template <typename IteratorT>
-		class StatementGrammar : public qi::grammar<IteratorT>
-		{
-		public:
-			StatementGrammar()
-				:	StatementGrammar::base_type(_rule, "Statement")
-			{
-				_rule.name("Statement");
-				_rule %= qi::lit("statement");
-			}
-
-		private:
-			qi::rule<IteratorT>				_rule;
-		};
-
-
-		template <typename IteratorT>
-		class StatementListGrammar : public qi::grammar<IteratorT>
-		{
-		public:
-			StatementListGrammar()
-				:	StatementListGrammar::base_type(_rule, "StatementList")
-			{
-				_rule.name("StatementList");
-				_rule %= qi::skip(qi::space)[_statementGrammar >> -(_statementGrammar > ';' > _rule)];
-			}
-
-		private:
-			qi::rule<IteratorT>				_rule;
-			StatementGrammar<IteratorT>		_statementGrammar;
-		};
-
-
-		template <typename IteratorT>
-		class CompoundStatementGrammar : public qi::grammar<IteratorT>
-		{
-		public:
-			CompoundStatementGrammar()
-				:	CompoundStatementGrammar::base_type(_rule, "CompoundStatement")
-			{
-				_rule.name("CompoundStatement");
-				_rule %= qi::skip(qi::space)[qi::lit("Begin") >
-					qi::no_skip[qi::omit[+qi::space]] >
-					/* _statementListGrammar  > */
-					qi::lit("End")];
-			};
-
-		private:
-			qi::rule<IteratorT>					_rule;
-			StatementListGrammar<IteratorT>		_statementListGrammar;
-		};
-
-
-		template <typename IteratorT>
-		class BlockGrammar : public qi::grammar<IteratorT, ast::Block()>
-		{
-		public:
-			BlockGrammar()
-				:	BlockGrammar::base_type(_rule, "Block")
-			{
-				_rule.name("Block");
-				_rule %= qi::skip(qi::space)[_declarationsGrammar > qi::no_skip[qi::omit[+qi::space]] > _compoundStatementGrammar];
-			}
-
-		private:
-			qi::rule<IteratorT, ast::Block()>		_rule;
-			DeclarationsGrammar<IteratorT>			_declarationsGrammar;
-			CompoundStatementGrammar<IteratorT>		_compoundStatementGrammar;
-		};
-
-	}
-
-
-	template <typename IteratorT>
-	class PascalGrammar : public qi::grammar<IteratorT, ast::PascalProgram()>
+	template <typename IteratorT, typename SkipperT>
+	class pascal_grammar : public qi::grammar<IteratorT, ast::pascal_program(), SkipperT>
 	{
 	public:
-		PascalGrammar()
-			:	PascalGrammar::base_type(_rule, "Pascal")
+		pascal_grammar()
+			:	pascal_grammar::base_type(_program, "Pascal")
 		{
-			_rule %= qi::skip(qi::space)[_programNameGrammar > _blockGrammar > '.'];
+			_reserved_keywords.add
+					("absolute", "")
+					("and", "")
+					("array", "")
+					("asm", "")
+					("begin", "")
+					("break", "")
+					("case", "")
+					("const", "")
+					("constructor", "")
+					("continue", "")
+					("destructor", "")
+					("dispose", "")
+					("div", "")
+					("do", "")
+					("downto", "")
+					("else", "")
+					("end", "")
+					("exit", "")
+					("false", "")
+					("file", "")
+					("for", "")
+					("function", "")
+					("goto", "")
+					("if", "")
+					("implementation", "")
+					("in", "")
+					("inherited", "")
+					("inline", "")
+					("interface", "")
+					("label", "")
+					("mod", "")
+					("new", "")
+					("nil", "")
+					("not", "")
+					("object", "")
+					("of", "")
+					("on", "")
+					("operator", "")
+					("or", "")
+					("packed", "")
+					("procedure", "")
+					("program", "")
+					("record", "")
+					("repeat", "")
+					("self", "")
+					("set", "")
+					("shl", "")
+					("shr", "")
+					("string", "")
+					("then", "")
+					("to", "")
+					("true", "")
+					("try", "")
+					("type", "")
+					("unit", "")
+					("until", "")
+					("uses", "")
+					("var", "")
+					("while", "")
+					("with", "")
+					("xor", "");
+
+			_empty.name("empty");
+			_empty %= qi::attr(ast::empty());
+
+			_identifier.name("identifier");
+			_identifier %= +(qi::char_("a-zA-Z")) - qi::no_case[_reserved_keywords];
+
+			_variable.name("variable");
+			_variable %= _identifier;
+
+			_string_expr.name("string_expr");
+			_string_expr %= +(qi::char_("a-zA-Z"));
+
+			_program.name("program");
+			_program %= qi::lit("Program") > qi::no_skip[qi::omit[+qi::space]] > _identifier > ';' > _block > '.';
+
+			_block.name("block");
+			_block %= _declarations > _compound_statement;
+
+			_declarations.name("declarations");
+			_declarations %=
+					(qi::no_case[qi::lit("Var")] > qi::no_skip[qi::omit[+qi::space]] > +(_variable_declaration > qi::lit(';'))) |
+					_empty;
+
+			_compound_statement.name("compound_statement");
+			_compound_statement %= qi::no_case[qi::lit("Begin")] > qi::no_case[qi::lit("End")];
+
+			_variable_declaration.name("variable_declaration");
+			_variable_declaration %= (qi::skip(qi::space)[_identifier > *(qi::lit(',') > _identifier) > qi::lit(':')] > _type_specifier);
+
+			_type_specifier.name("type_spec");
+			_type_specifier %=
+					(qi::no_case[qi::lit("Integer")] > qi::attr(ast::integer())) |
+					(qi::no_case[qi::lit("Real")] > qi::attr(ast::real())) |
+					(qi::no_case[qi::lit("String")] > qi::attr(ast::string())) |
+					(qi::no_case[qi::lit("Boolean")] > qi::attr(ast::boolean()));
+
+			_rel_operator.name("rel_operator");
+			_rel_operator %=
+					(qi::lit("=") > qi::attr(ast::rel_op_eq())) |
+					(qi::lit("<>") > qi::attr(ast::rel_op_ne())) |
+					(qi::lit("<") > qi::attr(ast::rel_op_lt())) |
+					(qi::lit("<=") > qi::attr(ast::rel_op_lte())) |
+					(qi::lit(">") > qi::attr(ast::rel_op_gt())) |
+					(qi::lit(">=") > qi::attr(ast::rel_op_gte()));
+
+			_boolean_expr.name("boolean_expr");
+			_boolean_expr %=
+					(qi::no_case[qi::lit("true")] > qi::attr(ast::bool_true())) |
+					(qi::no_case[qi::lit("false")] > qi::attr(ast::bool_false()));
 		}
 
 	private:
-		qi::rule<IteratorT, ast::PascalProgram()>	_rule;
-		detail::ProgramNameGrammar<IteratorT>		_programNameGrammar;
-		detail::BlockGrammar<IteratorT>				_blockGrammar;
+		qi::symbols<char, std::string>									_reserved_keywords;
+
+		qi::rule<IteratorT, ast::pascal_program(), SkipperT>			_program;
+		qi::rule<IteratorT, ast::block(), SkipperT>						_block;
+		qi::rule<IteratorT, ast::declarations(), SkipperT>				_declarations;
+		qi::rule<IteratorT, ast::variable_declaration(), SkipperT>		_variable_declaration;
+		qi::rule<IteratorT, ast::compound_statement(), SkipperT>		_compound_statement;
+
+		qi::rule<IteratorT, ast::empty(), SkipperT>						_empty;
+		qi::rule<IteratorT, ast::identifier(), SkipperT>				_identifier;
+		qi::rule<IteratorT, ast::variable(), SkipperT>					_variable;
+		qi::rule<IteratorT, ast::type_spec(), SkipperT>					_type_specifier;
+		qi::rule<IteratorT, ast::rel_operator(), SkipperT>				_rel_operator;
+		qi::rule<IteratorT, ast::string_expr(), SkipperT>				_string_expr;
+		qi::rule<IteratorT, ast::boolean_expr(), SkipperT>				_boolean_expr;
 	};
 
 }}

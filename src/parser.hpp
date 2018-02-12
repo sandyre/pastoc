@@ -21,7 +21,7 @@ namespace pastoc
 	class Parser
 	{
 	public:
-		static boost::optional<ast::PascalProgram> Process(const std::string& inputPath);
+		static boost::optional<ast::pascal_program> Process(const std::string& inputPath);
 	};
 
 }

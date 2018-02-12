@@ -1,8 +1,4 @@
 Program myProgram;
-Var
-somename, lehaKek : Integer;
-prikol, string, wow :   String;
-etoDa, etoNet : Boolean;
-
+Var somename, lehaKek : integer;
 Begin
 End.
