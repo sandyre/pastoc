@@ -15,7 +15,6 @@
 
 namespace pastoc
 {
-
 	void Generator::Generate(const std::string& inputPath, boost::optional<pastoc::ast::pascal_program> ast)
 	{
 		if (!ast)
@@ -24,29 +23,24 @@ namespace pastoc
 			return;
 		}
 
-		std::cout << "Generation step ... ";
+		std::cout << "Generation step is in process ... ";
 
 		const std::string outputFileName = inputPath.substr(0, inputPath.size() - 5) + ".c";
 		std::string generatedContent;
 
-		using sink_type = std::back_insert_iterator<std::string>;
-		sink_type sink(generatedContent);
-
-		const generators::cpp_grammar<sink_type> grammar;
-		const bool success = karma::generate(sink, grammar, *ast);
-
-		if (!success)
+		try
 		{
-			std::cout << "failed at some point, abort\n";
+			using namespace generators;
+			std::ofstream outputFile(outputFileName);
+			outputFile << ast.get();
+		}
+		catch (const std::exception& ex)
+		{
+			std::cout << " failed, exception thrown: " << ex.what() << std::endl;
 			return;
 		}
 
-		std::cout << "completed\n";
-
-		std::ofstream outputFile(outputFileName);
-		outputFile << generatedContent;
-
-		std::cout << "Transpiled code is saved into: " << outputFileName << std::endl;
+		std::cout << "done\nTranspiled code is saved into: " << outputFileName << std::endl;
 	}
 
 }

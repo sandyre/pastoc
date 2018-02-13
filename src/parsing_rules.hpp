@@ -99,10 +99,10 @@ namespace parsers
 			_variable %= _identifier;
 
 			_string_expr.name("string_expr");
-			_string_expr %= +(qi::char_("a-zA-Z"));
+			_string_expr %= qi::lit("'") > qi::no_skip[*(qi::char_ - qi::lit("'"))] > qi::lit("'");
 
 			_program.name("program");
-			_program %= qi::lit("Program") > qi::no_skip[qi::omit[+qi::space]] > _identifier > ';' > _block > '.';
+			_program %= qi::lit("Program") > qi::no_skip[qi::omit[+qi::space]] > _identifier > qi::lit(";") > _block > qi::lit(".");
 
 			_block.name("block");
 			_block %= _declarations > _compound_statement;
@@ -113,10 +113,27 @@ namespace parsers
 					_empty;
 
 			_compound_statement.name("compound_statement");
-			_compound_statement %= qi::no_case[qi::lit("Begin")] > qi::no_case[qi::lit("End")];
+			_compound_statement %=
+					qi::no_case[qi::lit("Begin")] >
+					qi::skip(qi::space)[_statement > *(qi::lit(";") > _statement)] >
+					qi::no_case[qi::lit("End")];
+
+			// FIXME: TUT SEGFAULT!
+			_statement.name("statement");
+			_statement %=
+					_assignment_statement |
+					_empty;
+
+			_assignment_statement.name("assignment_statement");
+			_assignment_statement %= _identifier > qi::lit(":=") > _expr;
+
+			_expr.name("expr");
+			_expr %=
+					_string_expr |
+					_boolean_expr;
 
 			_variable_declaration.name("variable_declaration");
-			_variable_declaration %= (qi::skip(qi::space)[_identifier > *(qi::lit(',') > _identifier) > qi::lit(':')] > _type_specifier);
+			_variable_declaration %= (qi::skip(qi::space)[_identifier > *(qi::lit(",") > _identifier) > qi::lit(":")] > _type_specifier);
 
 			_type_specifier.name("type_spec");
 			_type_specifier %=
@@ -147,6 +164,8 @@ namespace parsers
 		qi::rule<IteratorT, ast::block(), SkipperT>						_block;
 		qi::rule<IteratorT, ast::declarations(), SkipperT>				_declarations;
 		qi::rule<IteratorT, ast::variable_declaration(), SkipperT>		_variable_declaration;
+		qi::rule<IteratorT, ast::statement(), SkipperT>					_statement;
+		qi::rule<IteratorT, ast::assignment_statement(), SkipperT>		_assignment_statement;
 		qi::rule<IteratorT, ast::compound_statement(), SkipperT>		_compound_statement;
 
 		qi::rule<IteratorT, ast::empty(), SkipperT>						_empty;
@@ -156,6 +175,7 @@ namespace parsers
 		qi::rule<IteratorT, ast::rel_operator(), SkipperT>				_rel_operator;
 		qi::rule<IteratorT, ast::string_expr(), SkipperT>				_string_expr;
 		qi::rule<IteratorT, ast::boolean_expr(), SkipperT>				_boolean_expr;
+		qi::rule<IteratorT, ast::expr(), SkipperT>						_expr;
 	};
 
 }}

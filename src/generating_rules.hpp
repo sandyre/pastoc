@@ -11,75 +11,120 @@
 
 #include "AST.hpp"
 
-#include <boost/spirit/include/karma.hpp>
-#include <boost/spirit/include/phoenix.hpp>
-#include <boost/phoenix/bind/bind_member_variable.hpp>
-#include <boost/bind.hpp>
-
-namespace karma = boost::spirit::karma;
-namespace phoenix = boost::phoenix;
+#include <iostream>
 
 namespace pastoc {
 namespace generators
 {
 
-	template <typename OutputIterator>
-	class cpp_grammar : public karma::grammar<OutputIterator, ast::pascal_program()>
+	namespace Detail
 	{
-	public:
-		cpp_grammar()
-			:	cpp_grammar::base_type(_program)
+
+		struct type_spec_visitor : boost::static_visitor<std::string>
 		{
-			_identifier.name("identifier");
-			_identifier %= karma::string;
+			std::string operator()(ast::integer) const	{ return "int"; }
+			std::string operator()(ast::real) const 	{ return "double"; }
+			std::string operator()(ast::string) const	{ return "std::string"; }
+			std::string operator()(ast::boolean) const	{ return "bool"; }
+		};
 
-			_program.name("program");
-			_program %=
-					"// Program name: " << _identifier << karma::eol <<
-					"int main(int argc, char* argv[])" << karma::eol <<
-					_block << karma::eol;
 
-			_block.name("block");
-			_block %=
-					"{" << karma::eol <<
-					_declarations << karma::eol <<
-					karma::skip[_compound_statement] <<
-					"}" << karma::eol;
+		struct declarations_visitor : boost::static_visitor<std::string>
+		{
+			std::string operator()(ast::empty) const	{ return ""; }
 
-			_integer_type %= "int" << karma::omit[karma::eol];
-			_real_type %= "double" << karma::omit[karma::eol];
-			_string_type %= "std::string" << karma::omit[karma::eol];
-			_boolean_type %= "bool" << karma::omit[karma::eol];
+			std::string operator()(const std::vector<ast::variable_declaration>& decls) const
+			{
+				std::ostringstream ss;
+				for (const ast::variable_declaration& decl : decls)
+				{
+					ss << boost::apply_visitor(type_spec_visitor(), decl.type) << " ";
+					for (std::vector<ast::identifier>::const_iterator iter = decl.ids.begin(); iter != decl.ids.end(); ++iter)
+					{
+						if (iter == decl.ids.end() - 1)
+							ss << *iter;
+						else
+							ss << *iter << ", ";
+					}
 
-			_type_specifier.name("type_specifier");
-			_type_specifier %=
-					_integer_type |
-					_real_type |
-					_string_type |
-					_boolean_type;
+					ss << ";\n";
+				}
 
-			_declarations.name("declarations");
-			_declarations %= (_type_specifier[karma::_1 = phoenix::bind(&ast::declarations::type, karma::_val)] << karma::omit[karma::eol]) |
-					_empty;
+				return ss.str();
+			}
+		};
 
-			_empty %= karma::omit[karma::eol];
-		}
 
-	private:
-		karma::rule<OutputIterator, ast::pascal_program()>			_program;
-		karma::rule<OutputIterator, ast::identifier()>				_identifier;
-		karma::rule<OutputIterator, ast::block()>					_block;
-		karma::rule<OutputIterator, ast::declarations()>			_declarations;
-		karma::rule<OutputIterator, ast::compound_statement()>		_compound_statement;
+		struct expr_visitor : boost::static_visitor<std::string>
+		{
+			struct boolean_expr_visitor : boost::static_visitor<std::string>
+			{
+				std::string operator()(ast::bool_true) const	{ return "true"; }
+				std::string operator()(ast::bool_false) const	{ return "false"; }
+			};
 
-		karma::rule<OutputIterator, ast::empty()>					_empty;
+			std::string operator()(const ast::boolean_expr& expr) const { return boost::apply_visitor(boolean_expr_visitor(), expr); }
+			std::string operator()(const ast::string_expr& expr) const	{ return "\"" + expr + "\""; }
+		};
 
-		karma::rule<OutputIterator, ast::type_spec()>				_type_specifier;
-		karma::rule<OutputIterator, ast::integer()>					_integer_type;
-		karma::rule<OutputIterator, ast::real()>					_real_type;
-		karma::rule<OutputIterator, ast::string()>					_string_type;
-		karma::rule<OutputIterator, ast::boolean()>					_boolean_type;
-	};
+
+		struct statement_visitor : boost::static_visitor<std::string>
+		{
+			std::string operator()(ast::empty) const	{ return ""; }
+
+			std::string operator()(const ast::assignment_statement& statement) const
+			{
+				std::ostringstream ss;
+				ss << statement.var << " = " << boost::apply_visitor(expr_visitor(), statement.expr) << ";";
+				return ss.str();
+			}
+		};
+
+	}
+
+
+	std::ostream& operator<<(std::ostream& os, ast::pascal_program const& program);
+	std::ostream& operator<<(std::ostream& os, ast::block const& block);
+	std::ostream& operator<<(std::ostream& os, ast::declarations const& decls);
+	std::ostream& operator<<(std::ostream& os, ast::compound_statement const& comp_statement);
+
+
+	std::ostream& operator<<(std::ostream& os, ast::pascal_program const& program)
+	{
+		os << "// This file is generated from pascal program named " << program.name << "\n";
+		os << "// Default include directives\n";
+		os << "#include <iostream>\n";
+		os << "#include <string>\n\n";
+		os << "int main(int argc, char* argv[])\n";
+		os << program.main_block;
+		return os;
+	}
+
+
+	std::ostream& operator<<(std::ostream& os, ast::block const& block)
+	{
+		os << "{\n";
+		os << block.decls;
+		os << "\n";
+		os << block.statement;
+		os << "}\n";
+		return os;
+	}
+
+
+	std::ostream& operator<<(std::ostream& os, ast::declarations const& decls)
+	{
+		os << boost::apply_visitor(Detail::declarations_visitor(), decls);
+		return os;
+	}
+
+
+	std::ostream& operator<<(std::ostream& os, ast::compound_statement const& comp_statement)
+	{
+		for (const ast::statement& statement : comp_statement.statement_list)
+			os << boost::apply_visitor(Detail::statement_visitor(), statement) << "\n";
+		return os;
+	}
 
 }}
 

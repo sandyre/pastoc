@@ -14,7 +14,6 @@
 #include <boost/spirit/include/qi.hpp>
 
 #include <string>
-#include <list>
 #include <tuple>
 #include <vector>
 
@@ -102,8 +101,8 @@ namespace ast
 
 	struct term
 	{
-		factor					head_factor;
-		std::list<oper_factor>	tail_factors;
+		factor						head_factor;
+		std::vector<oper_factor>	tail_factors;
 	};
 
 
@@ -115,7 +114,7 @@ namespace ast
 	struct simple_expr
 	{
 		term						head_term;
-		std::list<signed_term>		tail_terms;
+		std::vector<signed_term>		tail_terms;
 	};
 
 
@@ -127,8 +126,8 @@ namespace ast
 	};
 
 	using expr = boost::variant<
-		simple_expr,
-		simple_rel_operator_simple_expr,
+//		simple_expr,
+//		simple_rel_operator_simple_expr,
 		boolean_expr,
 		string_expr
 	>;
@@ -140,22 +139,22 @@ namespace ast
 		expr		expr;
 	};
 
-	using writeln_statement = std::list<expr>;
+	using writeln_statement = std::vector<expr>;
 
 	struct conditional_statement;
 	struct compound_statement;
 	struct for_loop_statement;
 
 	using statement = boost::variant<
-		boost::recursive_wrapper<conditional_statement>,
-		boost::recursive_wrapper<compound_statement>,
-		boost::recursive_wrapper<for_loop_statement>,
+//		boost::recursive_wrapper<conditional_statement>,
+//		boost::recursive_wrapper<compound_statement>,
+//		boost::recursive_wrapper<for_loop_statement>,
 		assignment_statement,
-		writeln_statement,
+//		writeln_statement,
 		empty
 	>;
 
-	using statement_list = std::list<statement>;
+	using statement_list = std::vector<statement>;
 
 	struct conditional_statement
 	{
@@ -179,13 +178,13 @@ namespace ast
 
 	struct variable_declaration
 	{
-		std::list<identifier>	ids;
+		std::vector<identifier>	ids;
 		type_spec				type;
 	};
 
 
 	using declarations = boost::variant<
-		std::list<variable_declaration>,
+		std::vector<variable_declaration>,
 		empty
 	>;
 
@@ -206,8 +205,19 @@ namespace ast
 }}
 
 BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::assignment_statement,
+						  (pastoc::ast::variable, var),
+						  (pastoc::ast::expr, expr),
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::compound_statement,
+						  (pastoc::ast::statement_list, statement_list)
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
 						  pastoc::ast::variable_declaration,
-						  (std::list<pastoc::ast::identifier>, ids),
+						  (std::vector<pastoc::ast::identifier>, ids),
 						  (pastoc::ast::type_spec, type)
 						  )
 

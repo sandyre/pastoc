@@ -26,53 +26,39 @@ namespace pastoc
 			throw std::runtime_error("Input file does not exist");
 
 		const std::string fileContent { std::istreambuf_iterator<char>(fileStream), std::istreambuf_iterator<char>() };
-		std::vector<size_t> endlIndexes;
-		{
-			for (size_t idx = 0; idx < fileContent.size(); ++idx)
-				if (fileContent[idx] == '\n')
-					endlIndexes.push_back(idx);
-		}
 
-		bool success = false;
 		ast::pascal_program program;
 		parsers::pascal_grammar<std::string::const_iterator, qi::space_type> pascal_grammar;
 		std::string::const_iterator curIter = fileContent.begin(), endIter = fileContent.end();
 		try
-		{ success = qi::phrase_parse(curIter, endIter, pascal_grammar, boost::spirit::qi::space, program); }
+		{ qi::phrase_parse(curIter, endIter, pascal_grammar, boost::spirit::qi::space, program); }
 		catch (const boost::spirit::qi::expectation_failure<std::string::const_iterator>& ex)
 		{
+			std::string::const_iterator scanIter = fileContent.begin();
+			size_t lineIdx = 1;
+			size_t symbolIdx = 1;
+			while (scanIter != ex.first)
+			{
+				if (*scanIter == '\n')
+				{
+					++lineIdx;
+					symbolIdx = 1;
+				}
+				else
+					++symbolIdx;
+
+				++scanIter;
+			}
+
+			std::cout << "Syntax error at line: " << lineIdx << " symbol: " << symbolIdx << std::endl;
 			std::cout << "Expected: " << ex.what_ << std::endl;
 			std::cout << "Got: \"" << std::string(ex.first, ex.last) << "\"" << std::endl;
 			return boost::optional<ast::pascal_program>();
 		}
 
-		if (!success && curIter != endIter)
-		{
-			const size_t symbolIdx = std::distance(fileContent.begin(), curIter);
-			const auto lineIter = std::find_if(endlIndexes.begin(), endlIndexes.end(),
-											[&](size_t idx)
-											{
-												return idx > symbolIdx;
-											});
-			const size_t lineIdx = lineIter != endlIndexes.end() ? std::distance(endlIndexes.begin(), lineIter) : 0;
-
-			std::cout << "Syntax error at line: " << lineIdx << " symbol: " << symbolIdx << std::endl;
-			return boost::optional<ast::pascal_program>();
-		}
-		else
-		{
-			std::cout << "Parsing phase ended gracefully" << std::endl;
-
-			std::cout << "AST constructed, printing out" << std::endl << std::endl;
-			std::cout << "Program name: " << program.name << std::endl;
-			std::cout << "Variables:" << std::endl;
-			/*
-			for (const auto& decl : program.Block.Decls.Decls)
-				std::cout << decl << std::endl;
-			*/
-
-			return program;
-		}
+		std::cout << "Parsing phase ended gracefully" << std::endl;
+		std::cout << "Program name: " << program.name << std::endl;
+		return program;
 	}
 
 }
