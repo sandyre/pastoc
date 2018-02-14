@@ -7,3 +7,11 @@
 //
 
 #include "app.hpp"
+
+#include "parser.hpp"
+#include "generator.hpp"
+
+App::App(const std::string& inputPath)
+{
+	pastoc::Generator::Generate(inputPath, pastoc::Parser::Process(inputPath));
+}

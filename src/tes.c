@@ -1,4 +1,4 @@
-// This file is generated from pascal program named test
+// This file is generated from pascal program named myprog
 // Default include directives
 #include <iostream>
 #include <string>
@@ -6,11 +6,7 @@
 int main(int argc, char* argv[])
 {
 int myInt;
-std::string myString;
-bool myBool;
-double myDouble;
 
-myString = "eto testovi assignment dlya string";
-myString = "second assignment";
-myBool = false;
+myInt = 5  + 10 ;
+std::cout << "Hello world," << myInt  << std::endl;
 }

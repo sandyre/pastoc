@@ -11,16 +11,10 @@
 
 #include <string>
 
-#include "parser.hpp"
-#include "generator.hpp"
-
 class App
 {
 public:
-	App(const std::string& inputPath)
-	{
-		pastoc::Generator::Generate(inputPath, pastoc::Parser::Process(inputPath));
-	}
+	explicit App(const std::string& inputPath);
 };
 
 #endif /* app_hpp */

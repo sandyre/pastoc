@@ -72,23 +72,23 @@ namespace ast
 	using string_expr = std::string;
 
 
-	struct plus_factor_;
-	struct minus_factor_;
+	struct plus_factor;
+	struct minus_factor;
 
 	using factor = boost::variant<
 		int,
 		double,
 		variable,
-		boost::recursive_wrapper<plus_factor_>,
-		boost::recursive_wrapper<minus_factor_>
+		boost::recursive_wrapper<plus_factor>,
+		boost::recursive_wrapper<minus_factor>
 	>;
 
-	struct plus_factor_
+	struct plus_factor
 	{
 		factor		fact;
 	};
 
-	struct minus_factor_
+	struct minus_factor
 	{
 		factor		fact;
 	};
@@ -97,7 +97,12 @@ namespace ast
 	struct mul { };
 	struct div { };
 
-	using oper_factor = std::pair<boost::variant<mul, div>, factor>;
+	using factor_oper = boost::variant<
+		mul,
+		div
+	>;
+
+	using oper_factor = std::pair<factor_oper, factor>;
 
 	struct term
 	{
@@ -109,12 +114,17 @@ namespace ast
 	struct plus { };
 	struct minus { };
 
-	using signed_term = std::pair<boost::variant<plus, minus>, term>;
+	using sign = boost::variant<
+		plus,
+		minus
+	>;
+
+	using signed_term = std::pair<sign, term>;
 
 	struct simple_expr
 	{
 		term						head_term;
-		std::vector<signed_term>		tail_terms;
+		std::vector<signed_term>	tail_terms;
 	};
 
 
@@ -126,7 +136,7 @@ namespace ast
 	};
 
 	using expr = boost::variant<
-//		simple_expr,
+		simple_expr,
 //		simple_rel_operator_simple_expr,
 		boolean_expr,
 		string_expr
@@ -146,12 +156,12 @@ namespace ast
 	struct for_loop_statement;
 
 	using statement = boost::variant<
+		empty,
 //		boost::recursive_wrapper<conditional_statement>,
 //		boost::recursive_wrapper<compound_statement>,
 //		boost::recursive_wrapper<for_loop_statement>,
 		assignment_statement,
-//		writeln_statement,
-		empty
+		writeln_statement
 	>;
 
 	using statement_list = std::vector<statement>;
@@ -163,10 +173,12 @@ namespace ast
 		boost::variant<statement, empty>	else_statement;
 	};
 
+
 	struct compound_statement
 	{
 		statement_list			statement_list;
 	};
+
 
 	struct for_loop_statement
 	{
@@ -203,6 +215,40 @@ namespace ast
 	};
 
 }}
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::oper_factor,
+						  (pastoc::ast::factor_oper, first),
+						  (pastoc::ast::factor, second)
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::plus_factor,
+						  (pastoc::ast::factor, fact)
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::minus_factor,
+						  (pastoc::ast::factor, fact)
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::term,
+						  (pastoc::ast::factor, head_factor),
+						  (std::vector<pastoc::ast::oper_factor>, tail_factors)
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::signed_term,
+						  (pastoc::ast::sign, first),
+						  (pastoc::ast::term, second)
+						  )
+
+BOOST_FUSION_ADAPT_STRUCT(
+						  pastoc::ast::simple_expr,
+						  (pastoc::ast::term, head_term),
+						  (std::vector<pastoc::ast::signed_term>, tail_terms),
+						  )
 
 BOOST_FUSION_ADAPT_STRUCT(
 						  pastoc::ast::assignment_statement,

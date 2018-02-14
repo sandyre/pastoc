@@ -118,17 +118,23 @@ namespace parsers
 					qi::skip(qi::space)[_statement > *(qi::lit(";") > _statement)] >
 					qi::no_case[qi::lit("End")];
 
-			// FIXME: TUT SEGFAULT!
 			_statement.name("statement");
 			_statement %=
+					_writeln_statement |
 					_assignment_statement |
 					_empty;
 
 			_assignment_statement.name("assignment_statement");
 			_assignment_statement %= _identifier > qi::lit(":=") > _expr;
 
+			_writeln_statement.name("writeln_statement");
+			_writeln_statement %=
+					qi::no_case[qi::lit("writeln")] > qi::lit("(") >
+					(_expr > *(qi::lit(",") > _expr)) > qi::lit(")");
+
 			_expr.name("expr");
 			_expr %=
+					_simple_expr |
 					_string_expr |
 					_boolean_expr;
 
@@ -155,6 +161,42 @@ namespace parsers
 			_boolean_expr %=
 					(qi::no_case[qi::lit("true")] > qi::attr(ast::bool_true())) |
 					(qi::no_case[qi::lit("false")] > qi::attr(ast::bool_false()));
+
+			_simple_expr.name("simple_expr");
+			_simple_expr %= _term > *_signed_term;
+
+			_factor.name("factor");
+			_factor %=
+					qi::int_ |
+					qi::double_ |
+					_variable |
+					_plus_factor |
+					_minus_factor;
+
+			_plus_factor.name("plus_factor");
+			_plus_factor %= qi::lit("+") > _factor;
+
+			_minus_factor.name("minus_factor");
+			_minus_factor %= qi::lit("-") > _factor;
+
+			_sign.name("sign");
+			_sign %=
+					(qi::lit("+") > qi::attr(ast::plus())) |
+					(qi::lit("-") > qi::attr(ast::minus()));
+
+			_factor_oper.name("sign");
+			_factor_oper %=
+					(qi::lit("*") > qi::attr(ast::mul())) |
+					(qi::lit("/") > qi::attr(ast::div()));
+
+			_oper_factor.name("oper_factor");
+			_oper_factor %= _factor_oper > _factor;
+
+			_term.name("term");
+			_term %= _factor > *_oper_factor;
+
+			_signed_term.name("signed_term");
+			_signed_term %= _sign > _term;
 		}
 
 	private:
@@ -167,6 +209,7 @@ namespace parsers
 		qi::rule<IteratorT, ast::statement(), SkipperT>					_statement;
 		qi::rule<IteratorT, ast::assignment_statement(), SkipperT>		_assignment_statement;
 		qi::rule<IteratorT, ast::compound_statement(), SkipperT>		_compound_statement;
+		qi::rule<IteratorT, ast::writeln_statement(), SkipperT>			_writeln_statement;
 
 		qi::rule<IteratorT, ast::empty(), SkipperT>						_empty;
 		qi::rule<IteratorT, ast::identifier(), SkipperT>				_identifier;
@@ -175,7 +218,18 @@ namespace parsers
 		qi::rule<IteratorT, ast::rel_operator(), SkipperT>				_rel_operator;
 		qi::rule<IteratorT, ast::string_expr(), SkipperT>				_string_expr;
 		qi::rule<IteratorT, ast::boolean_expr(), SkipperT>				_boolean_expr;
+		qi::rule<IteratorT, ast::simple_expr(), SkipperT>				_simple_expr;
 		qi::rule<IteratorT, ast::expr(), SkipperT>						_expr;
+
+		qi::rule<IteratorT, ast::factor(), SkipperT>					_factor;
+		qi::rule<IteratorT, ast::plus_factor(), SkipperT>				_plus_factor;
+		qi::rule<IteratorT, ast::minus_factor(), SkipperT>				_minus_factor;
+		qi::rule<IteratorT, ast::oper_factor(), SkipperT>				_oper_factor;
+
+		qi::rule<IteratorT, ast::sign(), SkipperT>						_sign;
+		qi::rule<IteratorT, ast::factor_oper(), SkipperT>				_factor_oper;
+		qi::rule<IteratorT, ast::term(), SkipperT>						_term;
+		qi::rule<IteratorT, ast::signed_term(), SkipperT>				_signed_term;
 	};
 
 }}

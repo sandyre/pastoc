@@ -1,12 +1,8 @@
-Program test;
+Program myprog;
 Var
 myInt : integer;
-myString : string;
-myBool : boolean;
-myDouble : real;
 
 Begin
-myString := 'eto testovi assignment dlya string';
-myString := 'second assignment';
-myBool := false
+myInt := 5 + 10;
+writeln('Hello world,', myInt)
 End.
